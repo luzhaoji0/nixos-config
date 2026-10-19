@@ -16,10 +16,11 @@
   };
 
   outputs = { nixpkgs, home-manager, nixvim, ... }:
-    {
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-        system = "aarch64-linux";
+    let
+      mkSystem = system: hardware: nixpkgs.lib.nixosSystem {
+        inherit system;
         modules = [
+          hardware
           ./configuration.nix
           home-manager.nixosModules.home-manager
           {
@@ -32,6 +33,24 @@
             };
           }
         ];
+      };
+    in
+    {
+      nixosConfigurations = {
+        macbook = mkSystem "aarch64-linux" {
+          imports = [ ./hardware-configuration-macbook.nix ];
+          boot.loader.systemd-boot.enable = true;
+          boot.loader.efi.canTouchEfiVariables = true;
+        };
+        homepc = mkSystem "x86_64-linux" {
+          imports = [ ./hardware-configuration-homepc.nix ];
+          boot.loader.grub = {
+            enable = true;
+            device = "/dev/vda";
+            useOSProber = true;
+            fsIdentifier = "provided";
+          };
+        };
       };
     };
 }
